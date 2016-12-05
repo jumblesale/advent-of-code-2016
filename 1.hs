@@ -46,11 +46,6 @@ applyMovement (Location x direction) (Movement Right amount) = move (Location x 
 applyMovement (Location x direction) (Movement Left amount) = move (Location x direction') amount
     where direction' = prev direction
 
--- there must be a better way to do this - fold??
-applyMovements :: Location -> [Movement] -> Location
-applyMovements l [] = l
-applyMovements l (x:xs) = applyMovements (applyMovement l x) xs
-
 -- go forward by an amount
 move :: Location -> Int -> Location
 move (Location (x,y) North) amount = (Location (x,y+amount) North)
@@ -65,7 +60,7 @@ createMovements = map parseMovement . words
 
 -- figure out where we end up after applying movements to the starting location
 getFinalLocation :: Location
-getFinalLocation = applyMovements initialLocation (createMovements input)
+getFinalLocation = foldl applyMovement initialLocation (createMovements input)
 
 -- where we begin
 initialLocation :: Location
