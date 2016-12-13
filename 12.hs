@@ -83,6 +83,7 @@ cpy s (Id i) target  = updateState s (Register target valueFromExistingRegister)
 cpy s (Value v) target = updateState s (Register target v)
 
 -- if the register is NOT 0, increment the program counter by the specified amount
+-- if a value is supplied, check if that is 0 and do the jump if it's NOT 0
 jnz :: State -> IdentifierOrValue -> Int -> State
 jnz s (Id i) v = jnz s (Value valueFromRegister) v
     where valueFromRegister = _value (identifierToStateAccessor i s)
@@ -95,14 +96,13 @@ execute :: State -> Command -> State
 execute s (Inc i) = inc s i
 execute s (Dec i) = dec s i
 execute s (Cpy iov i) = cpy s iov i
-execute s (Jnz i v) = jnz s i v
+execute s (Jnz iov v) = jnz s iov v
 
 -- given a string like "c" or "a", convert it to an Identifier, C or A
 toIdentifier :: String -> Identifier
 toIdentifier x = read (map toUpper x) :: Identifier
 
-
--- given an input like "23" or "c", convert it to a Value 23 or an Id c
+-- given an input like "23" or "c", convert it to a (Value 23) or an (Id C)
 toIdentifierOrValue :: String -> IdentifierOrValue
 toIdentifierOrValue x = if isIdentifier x
                         then (Id (toIdentifier x))
@@ -117,18 +117,16 @@ parseCommand s
     | cmd == "dec" = (Dec $ toIdentifier (parts !! 1))
     | cmd == "cpy" = (Cpy (toIdentifierOrValue (parts !! 1)) (toIdentifier (parts !! 2)))
     | cmd == "jnz" = (Jnz (toIdentifierOrValue (parts !! 1)) (toValue (parts !! 2)))
-    | otherwise = error $ "command " ++ cmd ++ " not recognised"
+    | otherwise = error $ "command '" ++ s ++ "' not recognised"
     where 
         parts = words s
         cmd = parts !! 0
         toValue v = read v :: Int
 
-executeCommands :: State -> Int -> [Command] -> State
-executeCommands s i x =
+executeCommands :: State -> [Command] -> State
+executeCommands s x =
     if pc >= (length x) then s
-    else 
-        --trace (show pc) $ trace (show s) $ trace (show currentInstruction) $ 
-        executeCommands s' (i + 1) x
+    else executeCommands s' x
     where pc = _pc s
           s' = execute s currentInstruction
           currentInstruction = (x !! pc)
@@ -136,8 +134,8 @@ executeCommands s i x =
 parseInput :: IO [Command]
 parseInput = map parseCommand <$> lines <$> readFile "12.input"
 
-solution :: IO State
-solution = executeCommands initialState 0 <$> parseInput
+solution :: IO Int
+solution = _value . _a <$> executeCommands initialState <$> parseInput
 
-solution2 :: IO State
-solution2 = executeCommands initialState2 0 <$> parseInput
+solution2 :: IO Int
+solution2 = _value . _a <$> executeCommands initialState2 <$> parseInput
